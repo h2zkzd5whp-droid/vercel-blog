@@ -1,0 +1,56 @@
+---
+title: 'Data Transfer'
+date: '2026-05-05'
+tags: ['Network']
+draft: false
+summary: '데이터 전송 매체에 대해'
+---
+
+## 1. 데이터 전송 매체
+**송신기** ↔ **전송매체** ↔ **수신기**
+### 1-1 전송매체의 종류
+**신호가 물리적 매체(케이블) 안에서만 이동하는지로 구분**
+|용어|예시|
+|---|---|
+|Guided media| Twisted pair(꼬임선), Coxial cable(동축케이블), Optical fiber(광섬유)|
+|Unguided media| 공기, 진공등을 통한 전파|
+### 1-2 연결구조
+**매체에 연결된 장치들이 어떻게 배치되어있는가**
+
+- Direct link: 송수신기 사이에 amplifer(증폭기)나 repeater(중계기)외 다른 장치 연결 없음
+    - amplifier와 repeater는 신호 강도를 회복시켜주는 장비라서 "중간 장치"에 포함시키지 않는다
+- Point-to-Point: direct link이면서, 매체를 공유하는 장치가 2개
+- Multi-point: 두 개가 넘는 장치가 같은 매체를 공유
+
+### 1-3 전송방향성
+**신호가 어느 방향으로 흐르는가? 동시에 흐를수 있는가?**
+
+|용어|동시 송신|양방향|예시|
+| --- | --- | --- |---|
+|Simplex| x | x(단방향)|라디오방송|
+|Half duplex| x | O(교대)|무전기|
+|Full duplex| O | O |전화기|
+
+### 1-4 매체를 설계·선택할 때 고려하는 4가지 요소
+
+|요소|영향|
+|---|---|
+|Bandwidth(대역폭)|Frequency(주파수)의 범위 클수록 데이터율 상승|
+|Transmission impairments(전송 손상)| attenuation과 같은 손상이 거리 제한|
+|Interference(간섭)|겹치는 주파수 대역이 신호를 왜곡, 소멸|
+|Number of receivers(수신기 수)|수신기 수가 많을수록 신호가 감쇄됨|
+
+```
+주파수 영역 그래프
+
+진폭 ↑
+     │     ┌───────────┐
+     │     │           │
+     │     │           │
+     └─────┴───────────┴──────→ 주파수
+          300Hz       3400Hz
+          
+          ←─── bandwidth ───→
+              = 3100Hz
+```
+- attenuation(감쇄): 거리에 비례하여 감쇄되는 신호
