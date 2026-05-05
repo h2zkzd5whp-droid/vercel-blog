@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\valery\\\\project\\\\vercel-blog\")",
+      "Bash(git config *)",
+      "Bash(git -C \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog\" status)",
+      "Bash(git -C \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog\" log --oneline -3)"
+    ]
+  }
+}
