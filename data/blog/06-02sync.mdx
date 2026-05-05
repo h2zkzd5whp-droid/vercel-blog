@@ -96,7 +96,7 @@ void signal (semaphore S) {
 11. T1이 signal(S) 호출
 12. S.value++
    -1 → 0
-13. S.value <= 0 이므로 기다리는 thread가 있다는 뜻
+13. S.value &lt;= 0 이므로 기다리는 thread가 있다는 뜻
    → semaphore waiting queue에서 T2를 꺼냄
    → wakeup(T2)
 14. T2는 blocked 상태에서 ready 상태가 됨
