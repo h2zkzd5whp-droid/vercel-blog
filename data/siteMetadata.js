@@ -6,7 +6,7 @@ const siteMetadata = {
   description: 'dev blog',
   language: 'en-us',
   theme: 'system', // system, dark or light
-  siteUrl: 'https://valery-blog-aodenhtk1-h2zkzd5whp-droids-projects.vercel.app/',
+  siteUrl: 'https://kibotos.dev/',
   siteRepo: 'https://github.com/h2zkzd5whp-droid/vercel-blog',
   siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
   socialBanner: `${process.env.BASE_PATH || ''}/static/images/twitter-card.png`,
