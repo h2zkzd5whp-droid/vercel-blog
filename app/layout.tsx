@@ -72,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         async
         src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9188608147369332"
         crossOrigin="anonymous"
-        strategy="afterInteractive"
+        strategy="beforeInteractive"
       />
       <link
         rel="apple-touch-icon"
