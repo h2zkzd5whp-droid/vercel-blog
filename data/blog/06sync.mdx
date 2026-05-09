@@ -6,17 +6,37 @@ draft: false
 summary: 'sync, critical section, locks'
 ---
 
-[Synchronization](#syncrhonization) · [스레드 공유](#스레드끼리-뭐가-공유되고-뭐가-공유-안되나) · [Critical Section](#critical-section) · [Critical Section 요구사항](#critical-section의-요구사항) · [Locks](#locks) · [Locks 문제점 해결법](#locks의-문제점-해결법-3가지) · [Peterson's Algorithm](#petersons-algorithm)
+- [Synchronization](#syncrhonization)
+  - [스레드끼리 뭐가 공유되고 뭐가 공유 안되나](#스레드끼리-뭐가-공유되고-뭐가-공유-안되나)
+  - [Critical Section](#critical-section)
+  - [Critical Section의 요구사항](#critical-section의-요구사항)
+    - [1. mutual exclusion](#1mutual-exclusion)
+    - [2. 동기화에서의 progress](#2-동기화에서의-progress)
+    - [3. bounded waiting](#3-bounded-waiting)
+    - [4. performance](#4-performance)
+  - [Critical Section의 요구사항을 만족시키기 위한 조건들](#critical-section의-요구사항을-만족시키기-위한-조건들)
+  - [Locks](#locks)
+  - [Locks의 문제점 해결법 3가지](#locks의-문제점-해결법-3가지)
+    - [1. 알고리즘 사용](#1-알고리즘-사용)
+    - [2. 하드웨어 지원](#2-하드웨어-지원)
+    - [3. interrupts 꺼버리기](#3-interrupts-꺼버리기)
+  - [초기 알고리즘](#초기-알고리즘acquire-문제점-해결을-위한)
+  - [Peterson's Algorithm](#petersons-algorithm)
+  - [최종](#최종)
 
 # Syncrhonization
+
 **하나의 공유 리소스에 여러 스레드가 접근할 때 어떻게 해결할 것인가?**
+
 - 스레드 실행은 임의로 섞일 수 있고, 각 스레드의 속도도 다를 수 있다
 
 ### 문제 상황: 동시에 서로 다른 atm기기에서 100만원을 인출하면 어케됨(read만 하는게 아니라 write도 하는 상황)?(p.5)
+
 - **이 문제상황 자체를 race condition이라고 함**
 - 즉 항상 같은 결과가 나오는 게 아니라, 실행 타이밍에 따라 달라진다
 
-### context switch 발생 문제. 
+### context switch 발생 문제.
+
 ```c
 void *threadcount(void *data) {
     int *count = (int *)data;
@@ -26,6 +46,7 @@ void *threadcount(void *data) {
     }
 }
 ```
+
 ```
 *count = *count+1;은 3단계로 나뉘어 지는데,
 1. (LOAD R1, MEM_count)
@@ -35,14 +56,17 @@ void *threadcount(void *data) {
 3.(STORE R1, MEM_count)
 그래서 이상적인 결과가 나오지 않을 수 있다
 ```
+
 ## 스레드끼리 뭐가 공유되고 뭐가 공유 안되나?
+
 - 공유되는거: code, global/static data, heap
 - 공유 안하는거: stack
-    - **다른 스레드의 stack에 있는 local variable 주소를 넘기지 마라 왜 why: stack은 스레드마다 따로지만 포인터를 넘기면 다른 스레드도 그 주소를 접근할 수 있기 때문에**
+  - **다른 스레드의 stack에 있는 local variable 주소를 넘기지 마라 왜 why: stack은 스레드마다 따로지만 포인터를 넘기면 다른 스레드도 그 주소를 접근할 수 있기 때문에**
 
 **진짜 기준은 같은 메모리 위치를 여러 실행 흐름이 접근할 수 있느냐**
 
 ## Critical Section
+
 **여러스레드가 접근가능한 공유 리소스의 코드조각**
 
 ```c
@@ -58,47 +82,65 @@ int withdraw(account, amount) {
 - 한 스레드가 critical section에 들어가있으면 다른 스레드가 들어가지 못하도록 막아주는 것이 필요하다. 그렇지 않으면 race condition이 발생한다.
 
 ## Critical Section의 요구사항
+
 ### 1.mutual exclusion
+
 - 한 스레드가 critical section에 들어가 있으면 다른 스레드가 못들어가게 막는거
 
 ### 2. 동기화에서의 progress
+
 1. 어떤 스레드가 크리티컬 섹션안에 들어가있으면 적절한 시간 내에 끝내고 나와야함
 2. 어떤 스레드가 크리티컬 섹션 밖에 있다면 다른 스레드가 크리티컬 섹션 안에 들어가는것을 방해해서는 아니된다.
 
 ### 3/ bounded waiting
+
 - 어떤 스레드가 크리티컬 섹션안에 들어갈려고 대기 중이면 반드시 들어가야한다.
 
 ### 4. performance
+
 - 크리티컬 섹션안에 들어가있으면 가능한 한 빠르게 나와야한다
 
 ## Critical Section의 요구사항을 만족시키기 위한 조건들
+
 ### 1. Locks
+
 ### 2. Semaphore
+
 ### 3. Monitors
+
 ### 4. Messages
 
 ## Locks
+
 **문 잠가버리기**
+
 ### case1: lock이 풀려 있음
+
 1. critical section을 실행 중인 thread가 없음
 2. 어떤 thread가 acquire() 호출
 3. lock을 “잡힘” 상태로 바꿈
 4. acquire()가 return함
 5. 그 thread가 critical section 코드 실행
+
 ### case2: lock이 잡혀 있음
+
 1. 이미 어떤 thread가 critical section 실행 중
 2. 다른 thread가 acquire() 호출
 3. acquire()가 바로 return하지 않음
 4. spinlock이면 계속 확인하면서 기다림
 5. mutex면 waiting queue에 들어가서 잠듦
+
 ### critcial section 작업이 끝났을 떄
+
 1. release() 호출
 2. lock을 풀림 상태로 바꿈
 3. 기다리는 thread가 있으면 하나를 깨움
 4. 깨어난 thread가 acquire를 완료함
 5. 그 thread가 critical section으로 들어감
+
 ### 문제점
-```c 
+
+```c
 void acquire (struct lock *l) {
 while (l->held);
 // 여기서 context switch가 발생하면? 스레드 A에서 스레드 B로 이동하는데 스레드 B가 held = 1을 잡게되서 critcal section에 들어감. 그 후 다시 context switch되어서 스레드 A로 전환. 그 후에 held = 1이됨. 그래서 critcal section에 스레드 A, B가 동시에 들어가게된다.
@@ -108,26 +150,38 @@ void release (struct lock *l) {
 l->held = 0;
 }
 ```
-- 띠리서 lock을 위한 acquire함수가 재귀적으로 필요하게 된다. 
+
+- 띠리서 lock을 위한 acquire함수가 재귀적으로 필요하게 된다.
 - 그래서 atomic operation이 필요하다(원자적으로 묶어버려서 context switch 못일어나게)
+
 ### 특징
+
 - critical section에 들어가기 위해서 반드시 acquire()를 해줘야한다
 - lock에서 waiting는 spinlock(계속 cpu사용함)이거나 mutex일 떄 block(cpu덜먹음)
 - spinlock의 문제점: 계속 lock풀렸는지 확인해서 cpu를 많이 잡아먹는다.
+
 ## Locks의 문제점 해결법 3가지
+
 ### 1. 알고리즘 사용
+
 - 단일 변수 읽기/쓰기는 atomic하다고 가정
+
 1. 대거 알고리즘
 2. 피터슨 알고리즘
 3. 램포트의 빵집 알고리즘(프로세스가 2개 이상 일 떄)
+
 ### 2. 하드웨어 지원
+
 - Atomic instructions
-    - context switch가 발생하면 문제가 되니까 이거 자체를 하나로 묶기
-        - 예시: test-and-set, swap
+  - context switch가 발생하면 문제가 되니까 이거 자체를 하나로 묶기
+    - 예시: test-and-set, swap
+
 ### 3. interrupts 꺼버리기
+
 - interrupt를 끄면 timer interrupt가 안 들어온다.
 - timer interrupt가 안 들어오면 강제 context switch가 안 일어난다.
 - context switch가 안 일어나면 현재 스레드가 critical section을 끝까지 실행할 수 있다.
+
 ```c
 void acquire (struct lock *l) {
     cli(); // cli()로 인터럽트 끄기
@@ -136,11 +190,13 @@ void release (struct lock *l) {
     sti(); // sti()로 인터럽트 키기
 }
 ```
+
 #### 왜 인터럽트 끄는게 해결책이 될 수 없냐?
+
 1. 커널에서만 동작이 가능하다.
-    - 그럼 OS가 시스템 콜로 제공하면 안됨? -> 안됨. 왜냐. 보안이슈나 버그 때문에
+   - 그럼 OS가 시스템 콜로 제공하면 안됨? -> 안됨. 왜냐. 보안이슈나 버그 때문에
 2. 멀티 프로세서에서 충분하지 않다
-    - CPU0의 인터럽트를 꺼도 CPU1의 스레드가 꺼지진 않는다
+   - CPU0의 인터럽트를 꺼도 CPU1의 스레드가 꺼지진 않는다
 3. critcial section이 길면 중요한 이벤트를 놓칠 수 있다.
 
 ## 초기 알고리즘(acquire 문제점 해결을 위한)
@@ -154,11 +210,11 @@ void acquire (int process) {
     // 스레드 1로 전환
     // 스레드 1 = true
     // 스레드 1도 스핀하며 대기하고 스레드 0도 스핀하며 대기하는 문제 발생
-    
+
     while (interested[other]);  // 다른 스레드가 critcal section에 들어가고 싶어하면 내 스레드는 여기서 spin하면서 기다리기
 }
 void release (int process) {
-    interested[process] = FALSE;    // 내 스레드 놔주기 
+    interested[process] = FALSE;    // 내 스레드 놔주기
 }
 // 그 다음 스레드로 넘어가서 다음 스레드가 받아주기
 void acquire (int process) {
@@ -173,11 +229,13 @@ void release (int process) {
 ```
 
 ## Peterson's Algorithm
+
 - 단일 변수 읽고 쓰기는 atomic하다고 가정.
 - 특징: turn 이라는 변수 추가
-**왜 추가 했냐?**
+  **왜 추가 했냐?**
+
 ```
-초기 알고리즘의 문제점: 
+초기 알고리즘의 문제점:
 T0: interested[0] = TRUE
 T1: interested[1] = TRUE
 
@@ -186,6 +244,7 @@ T1: 상대도 TRUE네 → 기다림
 
 결과: 둘 다 못 들어감
 ```
+
 ```c
 int turn;
 int interested[2];
@@ -198,17 +257,18 @@ void acquire (int process) {
     // 여기서 context switch 발생하면?
     // t0[other = 1, turn = 1, interested0 = true], 인 상태에서
     // t1[ther = 0, interested1 = true, turn = 0] while(interested[0]=true && 0=0)
-    // 이래서 while문 돌게되고 
+    // 이래서 while문 돌게되고
     // 다시 t0로 돌아오면 interested[1] = true, turn = 0, other = 1(other은 지역변수니까) 이니까, process0은 정상 작동
     while (interested[other] && turn == other); // 상대가 들어가고 싶어하고, 현재 차례도 상대라면 기다린다.
-    // 초기 알고리즘과 다른 점은 
+    // 초기 알고리즘과 다른 점은
 }
 void release (int process) {
     interested[process] = FALSE;
 }
 ```
+
 ```
-정상 흐름 예시: 
+정상 흐름 예시:
 other = t1, process = t0
 interested[0] = true // interested[1] = false
 turn = t1
@@ -219,6 +279,7 @@ while(interested[t1] && t1 == t1)
 ```
 
 ## 최종
+
 ```
 이번 파트의 결론
 lock은 그냥 변수 하나로 만들면 안 된다.
