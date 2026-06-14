@@ -5,8 +5,31 @@
       "Bash(git config *)",
       "Bash(git -C \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog\" status)",
       "Bash(git -C \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog\" log --oneline -3)",
-      "Bash(npx tsc *)",
-      "Bash(curl -s https://kibotos.dev)"
+      "Bash(wsl -e bash -c \"cd /home/valery/project/vercel-blog && git checkout main && git pull origin main && git branch -d chore/add-ads-txt\")",
+      "Bash(ls \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog\" 2>&1 | head -50)",
+      "Read(///wsl.localhost/Ubuntu/home/valery/project/**)",
+      "Bash(ls \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog/scripts\" \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog/app\")",
+      "Read(///wsl.localhost/Ubuntu/home/valery/project/vercel-blog/**)",
+      "Bash(ls \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog/public\" 2>&1 | head -30; echo \"---\"; ls \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog/out\" 2>&1 | head -30; echo \"---\"; ls \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog/.next\" 2>&1 | head -30)",
+      "Bash(head -30 \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog/public/feed.xml\")",
+      "Read(///wsl.localhost/Ubuntu/home/valery/project/vercel-blog/public/**)",
+      "Bash(curl -s -L https://kibotos.dev/sitemap.xml)",
+      "Bash(curl -s -L https://kibotos.dev/feed.xml)",
+      "Bash(cd \"//wsl.localhost/Ubuntu/home/valery/project/vercel-blog\" && git status && echo \"---DIFF---\" && git diff && echo \"---LOG---\" && git log --oneline -5)",
+      "Bash(wsl -d Ubuntu -- bash -c 'cd /home/valery/project/vercel-blog && git status && echo \"---DIFF---\" && git diff && echo \"---LOG---\" && git log --oneline -5 && echo \"---BRANCH---\" && git branch --show-current')",
+      "Bash(wsl -d Ubuntu -- bash -c 'cd /home/valery/project/vercel-blog && git checkout -b fix/sitemap-trailing-slash && git add app/sitemap.ts && git status')",
+      "Bash(wsl -d Ubuntu -- bash -c 'cd /home/valery/project/vercel-blog && git commit -m \"fix\\(sitemap\\): emit URLs with trailing slash to match trailingSlash config *)",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && git push -u origin fix/sitemap-trailing-slash 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c 'cd /home/valery/project/vercel-blog && gh pr create --title '\\\\''fix\\(sitemap\\): emit URLs with trailing slash'\\\\'' --body \" *)",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && gh pr create --title 'fix\\(sitemap\\): emit URLs with trailing slash' --body-file .pr-body.tmp.md && rm .pr-body.tmp.md\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && gh pr checks 23 --watch 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && gh pr merge 23 --merge --delete-branch && git checkout main && git pull origin main && git branch -d fix/sitemap-trailing-slash 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && git fetch origin && git log --oneline origin/main -5 && echo '---' && git log --oneline fix/sitemap-trailing-slash -3\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && git rebase origin/main 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && git stash -u && git rebase origin/main && git stash pop 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && git checkout --theirs .claude/settings.json && git reset HEAD .claude/settings.json && git status && git stash drop 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && git checkout HEAD -- .claude/settings.json && git status && git log --oneline -5 && git push --force-with-lease origin fix/sitemap-trailing-slash 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/valery/project/vercel-blog && git log --oneline -3 && git branch\")"
     ]
   }
 }
