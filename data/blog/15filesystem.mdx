@@ -1,160 +1,243 @@
+---
+title: 'file system'
+date: '2026-06-16'
+tags: ['OS']
+draft: false
+summary: 'file system basics, mapping problem, directories, mounting, disk layout, VFS internals'
+---
+
+- [1. 기본 개념 (Basic Concepts)](#1-기본-개념-basic-concepts)
+  - [1. 장기 정보 저장의 3대 요구사항](#1-장기-정보-저장의-3대-요구사항)
+  - [2. File 이란?](#2-file-이란)
+  - [3. File System의 역할](#3-file-system의-역할)
+  - [4. 디스크의 논리적 뷰 (block device 추상화)](#4-디스크의-논리적-뷰-block-device-추상화)
+- [2. 핵심 모델 — "매핑 문제 (mapping problem)"](#2-핵심-모델--매핑-문제-mapping-problem)
+  - [1. 파일을 구성하는 3요소](#1-파일을-구성하는-3요소)
+  - [2. 매핑이 왜 비자명한가](#2-매핑이-왜-비자명한가)
+  - [3. 목표](#3-목표)
+  - [4. 핵심 설계 이슈](#4-핵심-설계-이슈)
+- [3. 파일 속성 & 연산](#3-파일-속성--연산)
+  - [1. File Attributes (metadata 종류)](#1-file-attributes-metadata-종류)
+  - [2. Unix 파일 연산 (system call)](#2-unix-파일-연산-system-call)
+- [4. 디렉토리 (Directories)](#4-디렉토리-directories)
+  - [1. 디렉토리의 두 얼굴](#1-디렉토리의-두-얼굴)
+  - [2. 계층적 디렉토리 시스템](#2-계층적-디렉토리-시스템)
+  - [3. 디렉토리 내부 구조 (Directory Internals)](#3-디렉토리-내부-구조-directory-internals)
+  - [4. 경로명 해석 (Pathname Translation) ★](#4-경로명-해석-pathname-translation-)
+  - [5. 디렉토리 연산](#5-디렉토리-연산)
+- [5. 파일 시스템 마운팅 (Mounting)](#5-파일-시스템-마운팅-mounting)
+- [6. 디스크 레이아웃 (Disk Layout)](#6-디스크-레이아웃-disk-layout)
+  - [1. 디스크 전체](#1-디스크-전체)
+  - [2. 파티션 내부 (FS-dependent, 파일시스템 종류마다 다름)](#2-파티션-내부-fs-dependent-파일시스템-종류마다-다름)
+- [7. 파일 시스템 내부 구조 (Internals)](#7-파일-시스템-내부-구조-internals)
+  - [1. 계층 구조 (위 → 아래)](#1-계층-구조-위--아래)
+  - [2. VFS (Virtual File System)](#2-vfs-virtual-file-system)
+  - [3. In-memory 자료구조](#3-in-memory-자료구조)
+
 # 1. 기본 개념 (Basic Concepts)
+
 디스크는 그냥 "512B 블록 N개"로만 보인다 → 사람이 쓰기엔 너무 날것 → 그 위에 추상화 한 겹 = 파일 시스템
- 
+
 ## 1. 장기 정보 저장의 3대 요구사항
+
 - 대량 정보 저장 (메모리는 작고 휘발성)
 - 프로세스 종료·전원 차단·재부팅에도 생존 (persistent)
 - 여러 프로세스가 동시 접근 가능
+
 ## 2. File 이란?
+
 - 정의: 보조저장장치에 기록된 "이름 붙은 관련 정보 묶음"
 - 핵심: persistent (전원 나가도 살아남음 ← 메모리와의 결정적 차이)
 - OS가 파일이라는 통일된 논리적 뷰를 제공 → 사용자는 블록·섹터 몰라도 됨
+
 ## 3. File System의 역할
+
 - 보조저장장치 추상화 → 파일이라는 단위로 보여줌
 - 논리적 구조화 → 디렉토리
 - 데이터 공유 (프로세스·사람·머신 간)
 - 보호/접근 제어 (security)
+
 ## 4. 디스크의 논리적 뷰 (block device 추상화)
+
 - 블록 디바이스 드라이버가 제공하는 연산:
   - Identify() → 전체 블록 수 N 반환
   - Read(시작 섹터#, 섹터 개수)
   - Write(시작 섹터#, 섹터 개수)
 - 즉 디스크는 `[512B][512B]...[512B]` (0 ~ N-1) 배열일 뿐 → 이름·디렉토리 개념 없음
----
- 
+
 # 2. 핵심 모델 — "매핑 문제 (mapping problem)"
+
 파일 시스템이 푸는 본질적 문제 = **`<파일명, 메타데이터, 데이터>` → `<블록 집합>` 매핑**
- 
+
 ## 1. 파일을 구성하는 3요소
+
 ### 1. File name
+
 - 사람이 접근하는 시작점 → `open("/etc/passwd", O_RDONLY)`
+
 ### 2. File attributes (metadata)
+
 - 파일 크기, 소유자, 접근 제어 목록(ACL)
 - 생성/접근/수정 시간 등
 - ※ 파일 "내용"이 아니라 "파일에 대한 정보"
+
 ### 3. File contents (data)
+
 - 실제 내용 → 파일 시스템은 이게 뭔지 신경 안 씀 (그냥 바이트 덩어리로 취급)
+
 ## 2. 매핑이 왜 비자명한가
+
 - 파일 하나의 데이터가 디스크 위에서 **흩어져(non-contiguous)** 저장됨
 - 예: "a.out"의 블록 1,2,3,4 / "dog.jpg"의 블록 1,2,3 가 디스크에 뒤섞여 배치
 - → 메타데이터가 "이 파일의 블록들이 디스크 어디에 있는지" 순서대로 들고 있어야 함
+
 ## 3. 목표
+
 - **Performance + Reliability** (이 둘이 자주 충돌함 → 설계 트레이드오프)
-## 4. 핵심 설계 이슈 (시험에 "어떤 문제를 풀어야 하나" 형태로 나옴)
+
+## 4. 핵심 설계 이슈
+
+(시험에 "어떤 문제를 풀어야 하나" 형태로 나옴)
+
 - 메타데이터에 무슨 정보를 담을까
 - 메타데이터를 어떻게 찾을까 → **경로명 → 메타데이터 매핑**
 - 데이터 블록을 어떻게 찾을까
 - 메타데이터·데이터 블록 관리 (할당 / 회수 / 여유공간 관리)
 - 크래시 후 어떻게 복구할까
----
- 
+
 # 3. 파일 속성 & 연산
- 
+
 ## 1. File Attributes (metadata 종류)
+
 - 보호 관련: Protection(누가 어떻게 접근), Password, Creator, Owner
 - 플래그(control flags): read-only / hidden / system / archive / ASCII·binary / random-access / temporary / lock
   - 예: archive flag = 0 백업됨, 1 백업 필요
   - 예: temporary flag = 1 이면 프로세스 종료 시 파일 삭제
 - 키 기반 조회용(레코드 검색): record length / key position / key length
 - 시간·크기: 생성 시간 / 마지막 접근 / 마지막 변경 / 현재 크기 / 최대 크기
+
 ## 2. Unix 파일 연산 (system call)
+
 - `creat` / `open` / `close`
 - `read` / `write` / `lseek` (파일 오프셋 이동)
 - `stat` (메타데이터 조회)
 - `chmod` (권한 변경) / `chown` (소유자 변경)
 - `flock` (파일 잠금) / `fcntl` (파일 제어)
----
- 
+
 # 4. 디렉토리 (Directories)
- 
+
 ## 1. 디렉토리의 두 얼굴
+
 - **사용자 입장**: 파일을 구조적으로 조직하는 수단
 - **파일 시스템 입장**: 이름 인터페이스 제공
   - → **논리적 파일 조직(이름)** 과 **물리적 디스크 배치** 를 분리 (핵심)
+
 ## 2. 계층적 디렉토리 시스템
+
 - 대부분 다단계(multi-level) 디렉토리 지원
 - 현재 작업 디렉토리(cwd, working directory) 개념 존재
 - 상대 경로: cwd 기준 → `cd ../../foo/bar/../bar`
 - 절대 경로: 루트부터 시작 → `cd /tmp/foo/bar`
+
 ## 3. 디렉토리 내부 구조 (Directory Internals)
+
 - 디렉토리 = **사실상 그냥 특별한 메타데이터를 담은 파일**
 - 내용 = `(파일 이름, 파일 속성)` 목록
   - 속성: 크기, 보호, 생성/접근 시간, 디스크상 위치 등
 - 보통 정렬 안 됨 (effectively random) → 정렬은 디렉토리 읽는 프로그램(`ls` 등)이 함
+
 ## 4. 경로명 해석 (Pathname Translation) ★
+
 `open("/a/b/c", ...)` 처리 과정:
+
 1. 루트 "/" 디렉토리 연다 (위치 항상 알고 있음)
 2. "/"에서 "a" 검색 → "a" 위치 획득
 3. "a" 열고 "b" 검색 → "b" 위치 획득
 4. "b" 열고 "c" 검색 → "c" 위치 획득
 5. 파일 "c" 오픈
+
 - ※ **각 단계마다 권한 검사** 수행
 - → 경로 한 단계 내려갈 때마다 디렉토리 읽고 검색하는 비용 큼 (시스템이 경로 걷는 데 시간 많이 씀)
+
 ### ★ open()이 read()/write()와 분리된 이유
+
 - 경로 해석이 비싸니까 → `read("/a/b/c", buf, 100)` 처럼 매 입출력마다 경로를 다시 걷게 하면 미친 짓
 - → **open()에서 경로 해석을 단 한 번만** 하고 결과(fd)를 넘김 → read/write는 fd만 쓰니까 경로 해석 불필요
 - 추가 최적화: OS가 prefix 조회 결과를 캐싱
   - `/a/b`, `/a/bb`, `/a/bbb` 는 모두 `/a` prefix 공유 → 한 번 찾은 거 재사용
+
 ## 5. 디렉토리 연산
+
 - 디렉토리도 파일이라 → 파일 연산으로 조작 가능
 - C 런타임이 상위 추상화 제공:
   - `opendir` / `readdir` / `seekdir` / `closedir`
 - 기타 시스템콜:
   - `rename` (이름 변경)
   - `link` (하드링크 생성) / `unlink` (링크 제거 = 삭제)
----
- 
+
 # 5. 파일 시스템 마운팅 (Mounting)
+
 "파일시스템을 OS가 인식해서 쓸 수 있게 만드는 단계"
- 
+
 - 파일 시스템은 **마운트되기 전엔 프로세스가 못 씀** (반드시 마운트 필요)
 - **Windows**: 드라이브 문자에 붙임 (`C:\`, `D:\`, ...)
 - **Unix**: 기존의 **빈 디렉토리(= mount point)** 에 붙임
   - 예: `/users` 아래에 새 파일시스템을 마운트하면 그 디렉토리가 새 FS의 루트처럼 동작
----
- 
+
 # 6. 디스크 레이아웃 (Disk Layout)
+
 물리적으로 디스크에 뭐가 어떤 순서로 깔리는지
- 
+
 ## 1. 디스크 전체
+
 - **MBR (Master Boot Record)**: boot code + partition table
 - **Partition들**: Partition 1(active) / 2 / 3 ...
   - active 파티션이 부팅 대상
+
 ## 2. 파티션 내부 (FS-dependent, 파일시스템 종류마다 다름)
+
 위에서 아래 순서:
+
 - **boot block**: 부팅 코드
 - **super block**: FS 메타데이터 (FS 타입, 전체 블록 수 등) ← FS 전체를 대표하는 정보(PK 같은 존재)
 - **bitmaps**: 여유 공간 관리용 자료구조 → "이 블록이 지금 **쓰이고 있나/비었나**" 표시
 - **i-nodes**: 파일 메타데이터 → "특정 파일을 디스크 어디에 어떻게 **배치**했나"
 - **root dir**: 루트 디렉토리
 - **files & directories**: 실제 파일·디렉토리 데이터
+
 > ⚠️ bitmap vs i-node 헷갈림 주의
+>
 > - bitmap = 블록의 사용/여유 여부 (공간 관리)
 > - i-node = 그 파일의 블록 배치 정보 (파일 관리)
- 
----
- 
+
 # 7. 파일 시스템 내부 구조 (Internals)
- 
+
 ## 1. 계층 구조 (위 → 아래)
+
 1. **System call interface** ← 유저 프로세스가 open/read/write 호출하는 진입점
 2. **VFS (Virtual File System)** ← 여러 FS를 하나로 추상화
 3. **개별 File System** (minix, nfs, ext4, fat, procfs ...)
 4. **buffer cache** ← 디스크 블록 캐싱 (성능)
 5. **device driver** ← 실제 하드웨어 제어
+
 ## 2. VFS (Virtual File System)
+
 - 역할:
   - 모든 파일 시스템을 **하나의 커널 레벨 포맷**으로 추상화 → 위(시스템콜)에선 FS 종류 몰라도 됨
   - user-level 시스템콜 수신 (open, read, write, close, stat 등)
   - **mount point traversal** 기반으로 특정 FS와 상호작용 → 경로 걷다가 마운트 지점 만나면 해당 FS 드라이버 호출
+
 ### ★ Linux VFS 공통 파일 모델 — 4개 객체 (단답·매칭 단골)
+
 - **superblock object**: 마운트된 파일 시스템 전체 정보
 - **dentry object**: 디렉토리 엔트리 ↔ 파일의 **연결(linking)** 정보 → 디렉토리 구조 담당
 - **inode object**: 특정 파일에 대한 일반 정보 → 파일 자체 담당
 - **file object**: **열린 파일 ↔ 프로세스** 간 상호작용 정보 (open된 상태)
+
 > dentry(디렉토리 구조) ↔ inode(파일 구조) 바꿔 쓰면 그대로 감점
- 
+
 ## 3. In-memory 자료구조 (실행 중 메모리에 올라오는 것들)
+
 - **per-process file descriptor table** (프로세스별 open-file table)
   - 프로세스마다 따로 가짐 → fd 번호로 인덱싱
 - **system-wide file table** (시스템 전역 open-file table)
@@ -162,4 +245,5 @@
 - **in-memory partition table**
 - **directory cache** (경로 해석 가속)
 - **buffer cache** (디스크 블록 캐싱)
+
 > fd table은 프로세스별 / file table은 전역 → 이 분리 구조가 fork·dup 때 파일 공유 동작을 설명함
